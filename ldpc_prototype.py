@@ -50,26 +50,25 @@ def calculate_check_to_bit(noisy_message):
 
 def llr(noisy_message):
     # Fold the check-to-bit correction into the soft values in place.
-    global TANNER_BIT_TO_CHECK, NOISE_IDX
+    global TANNER_BIT_TO_CHECK, NOISE_IDX, DATA_SIZE
     tanner_check_to_bit=calculate_check_to_bit(noisy_message)
     noisy_message+=tanner_check_to_bit
-    NOISE_IDX+=7
+    NOISE_IDX+=DATA_SIZE
 
 def generate_gaussian_noise(message):
     # Modulate the bits and add the next DATA_SIZE samples from the noise block.
-    global NOISE, NOISE_IDX
+    global NOISE, NOISE_IDX, DATA_SIZE
     signed_message=np.where(message==1,-1,1)
-    noisy_message= signed_message+NOISE[NOISE_IDX:7]
-    NOISE_IDX+=7
+    noisy_message= signed_message+NOISE[NOISE_IDX:NOISE_IDX+DATA_SIZE]
+    NOISE_IDX+=DATA_SIZE
     return noisy_message
 
 def iterative_ldpc(noisy_message): 
     # Keep updating until a pass no longer changes the hard decision
     # (negative -> 1, otherwise -> 0). Returns the soft values, not the bits.
     while True:
-        output_message=np.where(noisy_message<0,1,0)
         llr(noisy_message)
-        if np.all(np.where(noisy_message<0,1,0)==output_message):
+        if np.all((PARITY_CHECK_MATRIX @ np.where(noisy_message<0,1,0) )%2==0):
             break
     return noisy_message
 
