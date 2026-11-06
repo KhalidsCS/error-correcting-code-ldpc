@@ -43,9 +43,9 @@ def calculate_check_to_bit(noisy_message):
             # Bit 0 uses the second neighbor index as the magnitude; every other
             # bit uses the first neighbor index.
             if j>0:
-                tanner_check_to_bit[j]+= abs(TANNER_BIT_TO_CHECK[i, 0])*sign*current_sign*.75
+                tanner_check_to_bit[j]+= abs(noisy_message[sorted_abs_values_idx[0]])*sign*current_sign*.75
             elif noisy_message.shape[0]>1:
-                tanner_check_to_bit[j]+= abs(TANNER_BIT_TO_CHECK[i, 1])*sign*current_sign*.75
+                tanner_check_to_bit[j]+= abs(noisy_message[sorted_abs_values_idx[1]])*sign*current_sign*.75
     return tanner_check_to_bit
 
 def llr(noisy_message):
@@ -64,12 +64,15 @@ def generate_gaussian_noise(message):
     return noisy_message
 
 def iterative_ldpc(noisy_message): 
+    max_iterations=100
+    iterations=0
     # Keep updating until a pass no longer changes the hard decision
     # (negative -> 1, otherwise -> 0). Returns the soft values, not the bits.
-    while True:
+    while iterations<max_iterations:
         llr(noisy_message)
         if np.all((PARITY_CHECK_MATRIX @ np.where(noisy_message<0,1,0) )%2==0):
             break
+        iterations+=1
     return noisy_message
 
 def main():
