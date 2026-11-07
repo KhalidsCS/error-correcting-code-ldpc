@@ -36,16 +36,16 @@ def calculate_check_to_bit(noisy_message):
         sorted_abs_values_idx= sorted([x for x in TANNER_BIT_TO_CHECK[i]], key= lambda x: abs(noisy_message[x]))
         # Sign of the whole check: -1 when an odd number of its bits are negative.
         sign= -1 if math.prod([noisy_message[x] for x in sorted_abs_values_idx])<0 else 1
-        for j in sorted_abs_values_idx:
+        for j in range(len(sorted_abs_values_idx)):
             current_sign= -1 if noisy_message[j]<0 else 1
             # sign * current_sign drops this bit's own sign, leaving the product
             # of the other bits in the check. 0.75 scales that contribution.
             # Bit 0 uses the second neighbor index as the magnitude; every other
             # bit uses the first neighbor index.
             if j>0:
-                tanner_check_to_bit[j]+= abs(noisy_message[sorted_abs_values_idx[0]])*sign*current_sign*.75
-            elif noisy_message.shape[0]>1:
-                tanner_check_to_bit[j]+= abs(noisy_message[sorted_abs_values_idx[1]])*sign*current_sign*.75
+                tanner_check_to_bit[sorted_abs_values_idx[j]]+= abs(noisy_message[sorted_abs_values_idx[0]])*sign*current_sign*.75
+            elif len(sorted_abs_values_idx)>1:
+                tanner_check_to_bit[sorted_abs_values_idx[j]]+= abs(noisy_message[sorted_abs_values_idx[1]])*sign*current_sign*.75
     return tanner_check_to_bit
 
 def llr(noisy_message):
