@@ -48,12 +48,13 @@ def calculate_check_to_bit(noisy_message):
                 tanner_check_to_bit[sorted_abs_values_idx[j]]+= abs(noisy_message[sorted_abs_values_idx[1]])*sign*current_sign*.75
     return tanner_check_to_bit
 
-def llr(noisy_message):
+def llr(current_message_belief, noisy_message):
     # Fold the check-to-bit correction into the soft values in place.
     global TANNER_BIT_TO_CHECK, NOISE_IDX, DATA_SIZE
-    tanner_check_to_bit=calculate_check_to_bit(noisy_message)
-    noisy_message+=tanner_check_to_bit
+    tanner_check_to_bit=calculate_check_to_bit(current_message_belief)
+    current_message_belief= noisy_message+tanner_check_to_bit
     NOISE_IDX+=DATA_SIZE
+    return current_message_belief
 
 def generate_gaussian_noise(message):
     # Modulate the bits and add the next DATA_SIZE samples from the noise block.
@@ -63,25 +64,26 @@ def generate_gaussian_noise(message):
     NOISE_IDX+=DATA_SIZE
     return noisy_message
 
-def iterative_ldpc(noisy_message): 
+def iterative_ldpc(current_message_belief, noisy_message): 
     max_iterations=100
     iterations=0
     # Keep updating until a pass no longer changes the hard decision
     # (negative -> 1, otherwise -> 0). Returns the soft values, not the bits.
     while iterations<max_iterations:
-        llr(noisy_message)
+        current_message_belief=llr(current_message_belief, noisy_message)
         if np.all((PARITY_CHECK_MATRIX @ np.where(noisy_message<0,1,0) )%2==0):
             break
         iterations+=1
-    return noisy_message
+    return np.where(current_message_belief<0,1,0)
 
 def main():
     # Send one example word, decode it, and compare the hard decision to the original.
     message=np.array([1, 0, 1, 0, 1, 0, 1])
     noisy_message=generate_gaussian_noise(message)
-    output_message=iterative_ldpc(noisy_message)
+    current_message_belief=noisy_message.copy()
+    output_message=iterative_ldpc(current_message_belief, noisy_message)
     print(output_message)
-    if np.all(np.where(output_message<0,1,0)==message):
+    if np.all(output_message==message):
         print("Message decoded successfully")
     else:
         print("Message decoded incorrectly")
