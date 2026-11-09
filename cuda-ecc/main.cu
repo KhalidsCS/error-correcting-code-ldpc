@@ -169,6 +169,7 @@ int main(int argc, char** argv)
     // Frames [first, first + count) are decoded together: each kernel launch covers all of them via blockIdx.y.
     // Frames that finish early keep being updated until the whole batch is done, but their output is frozen.
     auto decode_batch = [&](int first, int count) {
+        CUDA_CHECK(cudaMemset(d_minimums, 0, batch * frame_minimums * sizeof(float)));
         size_t samples = static_cast<size_t>(count) * n;
         CUDA_CHECK(cudaMemcpy(d_noisy_message, &dataset.noisy_messages[static_cast<size_t>(first) * n],
                               samples * sizeof(float), cudaMemcpyHostToDevice));
