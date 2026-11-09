@@ -16,9 +16,12 @@ __global__ void generate_minimums_per_check(const float* current_message_belief,
         short sign = 1;
         for (int i = 0; i < tanner_btc_row_size; i++)
         {
-            int bit_to_check = tanner_bits_to_check[i + tanner_btc_row_size * index] + frame_index * message_size;
             short current_sign = decide_sign(current_message_belief[bit_to_check]);
-            update_minimums(min_value, second_min_value, current_message_belief[bit_to_check]);
+            int bit_to_check = tanner_bits_to_check[i + tanner_btc_row_size * index];
+            update_minimums(
+                min_value, second_min_value,
+                current_message_belief[bit_to_check + frame_index * message_size] -
+                    minimums[bit_to_check + message_size * index + frame_index * message_size * matrix_rows]);
             sign *= current_sign;
         }
         for (int i = 0; i < tanner_btc_row_size; i++)
