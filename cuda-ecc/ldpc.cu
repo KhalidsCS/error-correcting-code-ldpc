@@ -7,7 +7,8 @@ __global__ void generate_minimums_per_check(const float* current_message_belief,
                                             int* tanner_bits_to_check, size_t tanner_btc_row_size, size_t matrix_rows,
                                             float* minimums)
 {
-    int index = threadIdx.x;
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int frame_index = blockIdx.y;
     if (index < matrix_rows)
     {
         float min_value = INFINITY;
@@ -15,32 +16,36 @@ __global__ void generate_minimums_per_check(const float* current_message_belief,
         short sign = 1;
         for (int i = 0; i < tanner_btc_row_size; i++)
         {
-            int bit_to_check = tanner_bits_to_check[i + index * tanner_btc_row_size];
-            float noisy_message = current_message_belief[bit_to_check];
-            sign *= decide_sign(noisy_message);
-            update_minimums(min_value, second_min_value, noisy_message);
+            int bit_to_check = tanner_bits_to_check[i + tanner_btc_row_size * index] + frame_index * message_size;
+            short current_sign = decide_sign(current_message_belief[bit_to_check]);
+            update_minimums(min_value, second_min_value, current_message_belief[bit_to_check]);
+            sign *= current_sign;
         }
         for (int i = 0; i < tanner_btc_row_size; i++)
         {
-
             int bit_to_check = tanner_bits_to_check[i + tanner_btc_row_size * index];
-            short current_sign = decide_sign(current_message_belief[bit_to_check]);
-            minimums[bit_to_check + message_size * index] =
+            short current_sign = decide_sign(current_message_belief[bit_to_check + frame_index * message_size]);
+            minimums[bit_to_check + message_size * index + frame_index * message_size * matrix_rows] =
                 0.75f * sign * current_sign *
-                decide_minimums(min_value, second_min_value, current_message_belief[bit_to_check]);
+                decide_minimums(min_value, second_min_value,
+                                current_message_belief[bit_to_check + frame_index * message_size]);
         }
     }
 }
-__global__ void generate_check_per_bit(float* current_message_belief, size_t message_size, size_t matrix_rows,
-                                       float* minimums)
+__global__ void generate_check_per_bit(float* current_message_belief, const float* noisy_message,
+                                       const size_t message_size, const int* tanner_checks_per_bit,
+                                       const size_t max_checks_per_bit, const size_t matrix_rows, const float* minimums)
 {
-    int index = threadIdx.x;
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int frame_index = blockIdx.y;
     if (index < message_size)
     {
-
-        for (int i = 0; i < matrix_rows; i++)
+        current_message_belief[index + frame_index * message_size] = noisy_message[index + frame_index * message_size];
+        for (size_t i = 0; i < max_checks_per_bit; i++)
         {
-            current_message_belief[index] += minimums[message_size * i + index];
+            int check_index = tanner_checks_per_bit[index * max_checks_per_bit + i];
+            current_message_belief[index + frame_index * message_size] +=
+                minimums[message_size * check_index + index + frame_index * message_size * matrix_rows];
         }
     }
 }
