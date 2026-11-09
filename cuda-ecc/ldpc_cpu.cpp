@@ -61,26 +61,29 @@ class CpuDecoder
     int decode(const float* noisy_message, uint8_t* decoded, int max_iterations)
     {
         std::copy(noisy_message, noisy_message + message_size_, current_message_belief_.begin());
+        std::fill(check_to_bit_.begin(), check_to_bit_.end(), 0.0f);
         for (int iteration = 1; iteration <= max_iterations; iteration++)
         {
             for (int check = 0; check < matrix_rows_; check++)
             {
                 const int* bits = &tanner_bits_to_check_[check * bits_per_check_];
+                float* messages = &check_to_bit_[check * bits_per_check_];
                 float min_value = std::numeric_limits<float>::infinity();
                 float second_min_value = std::numeric_limits<float>::infinity();
                 short sign = 1;
+                // Each check sees the bit's belief minus its own message from the last iteration (no echo).
                 for (int i = 0; i < bits_per_check_; i++)
                 {
-                    float belief = current_message_belief_[bits[i]];
-                    sign *= decide_sign(belief);
-                    update_minimums(min_value, second_min_value, belief);
+                    float belief_without_echo = current_message_belief_[bits[i]] - messages[i];
+                    sign *= decide_sign(belief_without_echo);
+                    update_minimums(min_value, second_min_value, belief_without_echo);
                 }
                 for (int i = 0; i < bits_per_check_; i++)
                 {
-                    float belief = current_message_belief_[bits[i]];
-                    short current_sign = decide_sign(belief);
-                    check_to_bit_[check * bits_per_check_ + i] =
-                        0.75f * sign * current_sign * decide_minimums(min_value, second_min_value, belief);
+                    float belief_without_echo = current_message_belief_[bits[i]] - messages[i];
+                    short current_sign = decide_sign(belief_without_echo);
+                    messages[i] =
+                        0.75f * sign * current_sign * decide_minimums(min_value, second_min_value, belief_without_echo);
                 }
             }
 
