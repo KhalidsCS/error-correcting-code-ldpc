@@ -157,8 +157,7 @@ int main(int argc, char** argv)
                           dataset.tanner_bits_to_check.size() * sizeof(int), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_tanner_checks_per_bit, tanner_checks_per_bit.data(),
                           tanner_checks_per_bit.size() * sizeof(int), cudaMemcpyHostToDevice));
-    // generate_minimums_per_check only ever writes the (check, bit) entries that are edges of H,
-    // so zeroing once leaves every other entry at 0 for all frames and iterations.
+
     CUDA_CHECK(cudaMemset(d_minimums, 0, batch * frame_minimums * sizeof(float)));
 
     std::vector<uint8_t> decoded(static_cast<size_t>(dataset.frames) * n);
